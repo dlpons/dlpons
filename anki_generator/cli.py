@@ -28,6 +28,7 @@ def load_entries(path: Path) -> list[Entry]:
                     word=row["word"].strip(),
                     sentence=row["sentence"].strip(),
                     nuance=(row.get("nuance") or "").strip(),
+                    definition=(row.get("definition") or "").strip(),
                 )
                 for row in reader
             ]
@@ -39,6 +40,7 @@ def load_entries(path: Path) -> list[Entry]:
             word=item["word"].strip(),
             sentence=item["sentence"].strip(),
             nuance=item.get("nuance", "").strip(),
+            definition=item.get("definition", "").strip(),
         )
         for item in data
     ]

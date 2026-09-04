@@ -9,11 +9,17 @@ class Entry:
 
     `nuance`, if provided, is used as-is for the Nuance field instead of
     calling the Anthropic API -- useful when the nuance text was written
-    by hand or by a separate conversation with an LLM."""
+    by hand or by a separate conversation with an LLM.
+
+    `definition`, if provided, is used as-is instead of the JMdict lookup
+    -- useful for kana-only words where JMdict picks the wrong homograph
+    (e.g. bare あり resolving to 蟻 "ant" instead of the intended slang
+    "acceptable/fine" sense)."""
 
     word: str
     sentence: str
     nuance: str = ""
+    definition: str = ""
 
 
 @dataclass

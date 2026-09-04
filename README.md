@@ -80,14 +80,18 @@ e.g. the format used by the community
 ## Usage
 
 Input is a JSON (or CSV) file of `{word, sentence}` entries -- see
-`examples/entries.json`. Add an optional `"nuance"` key to skip the LLM
-call for that field entirely (e.g. if you already have nuance text from a
-separate conversation with Claude):
+`examples/entries.json`. Two optional keys let you override generated
+fields: `"nuance"` skips the LLM call for that field entirely (e.g. if you
+already have nuance text from a separate conversation with Claude), and
+`"definition"` skips the JMdict lookup (e.g. for a kana-only word where
+JMdict resolves to the wrong homograph, like bare あり picking 蟻 "ant"
+instead of the intended slang "acceptable" sense):
 
 ```json
 [
   { "word": "甘える", "sentence": "子供の頃はよく母に甘えていた。" },
-  { "word": "切ない", "sentence": "彼女の気持ちを思うと切ない気持ちになる。", "nuance": "..." }
+  { "word": "切ない", "sentence": "彼女の気持ちを思うと切ない気持ちになる。", "nuance": "..." },
+  { "word": "あり", "sentence": "じゃなかったらありだった。", "definition": "existing; alright; acceptable" }
 ]
 ```
 

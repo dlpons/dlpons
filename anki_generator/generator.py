@@ -20,11 +20,15 @@ def build_card(entry: Entry, use_llm: bool = True) -> CardResult:
     result.pitch_accent = pitch
     result.flags.extend(pitch_flags)
 
-    lemma = tokenize(entry.word)[0].lemma if tokenize(entry.word) else entry.word
-    definition, found = dictionary.definition(entry.word, lemma=lemma)
-    result.definition = definition
-    if not found:
-        result.add_flag(f'"{entry.word}" not found in JMdict -- Definition left blank')
+    if entry.definition:
+        definition = entry.definition
+        result.definition = definition
+    else:
+        lemma = tokenize(entry.word)[0].lemma if tokenize(entry.word) else entry.word
+        definition, found = dictionary.definition(entry.word, lemma=lemma)
+        result.definition = definition
+        if not found:
+            result.add_flag(f'"{entry.word}" not found in JMdict -- Definition left blank')
 
     if entry.nuance:
         result.nuance = entry.nuance
