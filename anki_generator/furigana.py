@@ -61,7 +61,13 @@ def align_reading(surface: str, reading_hiragana: str) -> str:
     out = []
     for part in parts:
         if _KANJI_RUN.fullmatch(part):
-            out.append(f"{part}[{next(groups)}]")
+            # Anki's {{furigana:}} template filter (kanji[reading] -> ruby)
+            # scopes the base text by scanning back to the nearest space
+            # (or start of string) before the "[" -- since Japanese text has
+            # no spaces, without this leading space it swallows everything
+            # back to the previous bracket (or start of field) as the ruby
+            # base instead of just this kanji run.
+            out.append(f" {part}[{next(groups)}]")
         else:
             out.append(part)
     return "".join(out)
