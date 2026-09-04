@@ -23,11 +23,25 @@ def load_entries(path: Path) -> list[Entry]:
     if path.suffix.lower() == ".csv":
         with path.open(encoding="utf-8") as f:
             reader = csv.DictReader(f)
-            return [Entry(word=row["word"].strip(), sentence=row["sentence"].strip()) for row in reader]
+            return [
+                Entry(
+                    word=row["word"].strip(),
+                    sentence=row["sentence"].strip(),
+                    nuance=(row.get("nuance") or "").strip(),
+                )
+                for row in reader
+            ]
 
     with path.open(encoding="utf-8") as f:
         data = json.load(f)
-    return [Entry(word=item["word"].strip(), sentence=item["sentence"].strip()) for item in data]
+    return [
+        Entry(
+            word=item["word"].strip(),
+            sentence=item["sentence"].strip(),
+            nuance=item.get("nuance", "").strip(),
+        )
+        for item in data
+    ]
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -26,7 +26,9 @@ def build_card(entry: Entry, use_llm: bool = True) -> CardResult:
     if not found:
         result.add_flag(f'"{entry.word}" not found in JMdict -- Definition left blank')
 
-    if use_llm:
+    if entry.nuance:
+        result.nuance = entry.nuance
+    elif use_llm:
         nuance_text, generated = nuance.generate(entry.word, definition, entry.sentence)
         result.nuance = nuance_text
         if not generated:

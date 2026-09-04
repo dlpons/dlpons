@@ -23,7 +23,7 @@ for you to fill in with HyperTTS / an image-search add-on).
 | `Word` / `Sentence` | Tokenized with [UniDic](https://unidic.ninjal.ac.jp/) via `fugashi` (a real morphological dictionary, not character-by-character guessing), converted to `kanji[reading]` bracket notation. Readings for dictionary-form words are cross-checked against [JMdict](https://www.edrdg.org/jmdict/j_jmdict.html) via `jamdict`; mismatches or unconfirmed readings are flagged in the CLI output rather than silently accepted. |
 | `PitchAccent` | UniDic ships compiled pitch-accent data (the mora at which pitch drops) for most common words -- this is real accent-dictionary data, not an estimate. It's validated in `tests/test_pitch_accent.py` against the classic textbook triplet 端/箸/橋 (all はし, three different accents) plus 雨/花. You can optionally point `PITCH_ACCENT_TSV` at a local `word<TAB>reading<TAB>pitch_number` file (e.g. exported from the Kanjium pitch accent dataset) to override/extend coverage. If a word has no accent data anywhere, the field is left **blank** and it's called out in the "Flags" section of the output -- never guessed. |
 | `Definition` | Quoted directly from JMdict glosses (first sense, up to 3 glosses). Left blank + flagged if the word isn't a JMdict headword. |
-| `Nuance` | LLM-generated (Claude), by design -- this is the one field that's a real dictionary lookup can't give you. Requires `ANTHROPIC_API_KEY`; left blank + flagged if it's not set, the call fails, or you pass `--no-llm`. |
+| `Nuance` | LLM-generated, by design -- this is the one field a real dictionary lookup can't give you. Two ways to fill it: (a) put a `"nuance"` key in the input entry yourself (e.g. written by a conversation with Claude) and the script uses it as-is, no API call; or (b) leave it out and set `ANTHROPIC_API_KEY` to have the script call the Anthropic API for you. If neither is available, it's left blank + flagged. |
 | `Audio` / `Image` | Always blank. |
 
 ## Setup
@@ -80,11 +80,14 @@ e.g. the format used by the community
 ## Usage
 
 Input is a JSON (or CSV) file of `{word, sentence}` entries -- see
-`examples/entries.json`:
+`examples/entries.json`. Add an optional `"nuance"` key to skip the LLM
+call for that field entirely (e.g. if you already have nuance text from a
+separate conversation with Claude):
 
 ```json
 [
-  { "word": "甘える", "sentence": "子供の頃はよく母に甘えていた。" }
+  { "word": "甘える", "sentence": "子供の頃はよく母に甘えていた。" },
+  { "word": "切ない", "sentence": "彼女の気持ちを思うと切ない気持ちになる。", "nuance": "..." }
 ]
 ```
 

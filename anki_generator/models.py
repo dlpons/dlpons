@@ -5,10 +5,15 @@ from dataclasses import dataclass, field
 
 @dataclass
 class Entry:
-    """One input item: a word to mine plus an example sentence."""
+    """One input item: a word to mine plus an example sentence.
+
+    `nuance`, if provided, is used as-is for the Nuance field instead of
+    calling the Anthropic API -- useful when the nuance text was written
+    by hand or by a separate conversation with an LLM."""
 
     word: str
     sentence: str
+    nuance: str = ""
 
 
 @dataclass
