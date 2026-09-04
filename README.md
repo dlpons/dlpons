@@ -115,6 +115,48 @@ and a "Flags" section listing anything it left blank or couldn't confirm
 (missing JMdict entry, no pitch-accent data, nuance not generated, etc.)
 so you know exactly what to review by hand.
 
+## Troubleshooting
+
+### Windows: `jamdict-data` install fails with `WinError 32`
+
+```
+error: [WinError 32] The process cannot access the file because it is being
+used by another process: 'jamdict_data/jamdict.db.xz'
+```
+
+This is a real bug in `jamdict-data`'s own `setup.py` (v1.5), not your
+machine: it opens `jamdict.db.xz` with `lzma.open(...)` and calls
+`os.unlink()` on that same file *while the handle from the `with` block is
+still open*. Deleting an open file is fine on Linux/Mac but always fails on
+Windows -- so this reproduces 100% of the time on Windows, regardless of
+antivirus, temp-folder location, or retries.
+
+Workaround: pre-decompress the database yourself so the buggy branch never
+runs (its guard is `if ZIPPED_DB exists and TARGET_DB doesn't exist`), then
+build a wheel from the patched source and install that instead of letting
+pip build the broken sdist:
+
+```bash
+pip download --no-binary jamdict-data --no-deps -d . jamdict-data==1.5
+tar xzf jamdict_data-1.5.tar.gz && cd jamdict_data-1.5
+python -c "
+import lzma, os
+with lzma.open('jamdict_data/jamdict.db.xz') as f:
+    data = f.read()
+with open('jamdict_data/jamdict.db', 'wb') as out:
+    out.write(data)
+os.remove('jamdict_data/jamdict.db.xz')
+"
+pip install wheel build
+python -m build --wheel   # produces dist/jamdict_data-1.5-py3-none-any.whl
+pip install dist/jamdict_data-1.5-py3-none-any.whl
+pip install -r requirements.txt   # now a no-op for jamdict-data, installs the rest
+```
+
+The resulting wheel is pure Python + data (`py3-none-any`), so it's fine to
+build it on any OS and copy the `.whl` file over to the Windows machine
+that needs it.
+
 ## Tests
 
 ```bash
