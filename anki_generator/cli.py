@@ -11,8 +11,9 @@ import sys
 from pathlib import Path
 
 from .ankiconnect import AnkiConnectClient, AnkiConnectError
+from .export import write_anki_import_file
 from .generator import build_card
-from .models import Entry
+from .models import CardResult, Entry
 
 DECK_NAME = "Mining"
 MODEL_NAME = "Devin1"
@@ -36,6 +37,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--model", default=MODEL_NAME, help=f"Anki note type name (default: {MODEL_NAME})")
     parser.add_argument("--ankiconnect-url", default="http://127.0.0.1:8765")
     parser.add_argument("--dry-run", action="store_true", help="Generate cards but don't push to Anki")
+    parser.add_argument(
+        "--export",
+        type=Path,
+        help="Write generated cards to this file for Anki's File > Import, instead of pushing via AnkiConnect",
+    )
     parser.add_argument("--no-llm", action="store_true", help="Skip nuance generation (leaves it blank)")
     parser.add_argument("--allow-duplicate", action="store_true")
     parser.add_argument("--tag", action="append", default=[], help="Tag to add to every note (repeatable)")
@@ -46,8 +52,9 @@ def main(argv: list[str] | None = None) -> int:
         print("No entries found in input file.", file=sys.stderr)
         return 1
 
+    push_to_anki = not args.dry_run and not args.export
     client = AnkiConnectClient(url=args.ankiconnect_url)
-    if not args.dry_run:
+    if push_to_anki:
         try:
             client.version()
         except AnkiConnectError as exc:
@@ -57,13 +64,15 @@ def main(argv: list[str] | None = None) -> int:
     ok = 0
     failed = 0
     all_flags: list[str] = []
+    results: list[CardResult] = []
 
     for entry in entries:
         result = build_card(entry, use_llm=not args.no_llm)
+        results.append(result)
         all_flags.extend(f"[{entry.word}] {flag}" for flag in result.flags)
 
-        if args.dry_run:
-            print(f"--- {entry.word} (dry run) ---")
+        if not push_to_anki:
+            print(f"--- {entry.word} ---")
             for name, value in result.fields().items():
                 print(f"  {name}: {value}")
             ok += 1
@@ -84,6 +93,10 @@ def main(argv: list[str] | None = None) -> int:
             result.anki_error = str(exc)
             print(f"FAILED to add {entry.word!r}: {exc}", file=sys.stderr)
             failed += 1
+
+    if args.export:
+        write_anki_import_file(results, args.export, deck=args.deck, model=args.model, tags=args.tag)
+        print(f"\nWrote {len(results)} note(s) to {args.export} -- Anki: File > Import, then pick this file.")
 
     print(f"\n{ok} succeeded, {failed} failed, {len(entries)} total.")
     if all_flags:

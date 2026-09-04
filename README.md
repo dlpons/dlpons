@@ -92,12 +92,20 @@ Input is a JSON (or CSV) file of `{word, sentence}` entries -- see
 # Preview what would be generated, without touching Anki:
 python -m anki_generator --input examples/entries.json --dry-run
 
-# Generate and push into Anki (Anki must be running):
+# Generate and push into Anki directly (Anki must be running with AnkiConnect):
 python -m anki_generator --input examples/entries.json
+
+# Generate a file for Anki's File > Import instead of using AnkiConnect
+# (useful if the script isn't running on the same machine as Anki):
+python -m anki_generator --input examples/entries.json --export mining_import.txt
 
 # Add a tag, allow duplicates, skip the LLM nuance call:
 python -m anki_generator --input my_words.json --tag mined-2026-09 --allow-duplicate --no-llm
 ```
+
+`--export` writes a tab-separated file with `#deck:`/`#notetype:`/`#columns:`
+header directives that Anki (2.1.45+) reads automatically, so importing it
+is just File > Import > pick the file > Import -- no manual field mapping.
 
 The script prints one line per note added, a final success/failure count,
 and a "Flags" section listing anything it left blank or couldn't confirm
