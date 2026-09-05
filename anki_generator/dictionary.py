@@ -39,24 +39,42 @@ def lookup(word: str) -> list[DictEntry]:
     return entries
 
 
-def best_entry(word: str) -> DictEntry | None:
-    """Pick the entry whose kanji (or kana) form matches `word` exactly,
-    falling back to the first result JMdict returns."""
+def best_entry(word: str, reading: str | None = None) -> DictEntry | None:
+    """Pick the entry whose kanji (or kana) form matches `word` exactly. A
+    single kanji spelling often covers several JMdict entries with
+    different readings and unrelated meanings (e.g. 分 = ふん "minute" /
+    ぶ "one-tenth" / ぶん "portion"; 側 = そば "near" / がわ "side"). When
+    `reading` is given (typically the reading we already determined via
+    UniDic for furigana), prefer whichever matching entry actually has
+    that reading, instead of JMdict's arbitrary first-listed homograph."""
     entries = lookup(word)
     if not entries:
         return None
-    for e in entries:
-        if word in e.kanji_forms or word in e.kana_forms:
-            return e
-    return entries[0]
+
+    matches = [e for e in entries if word in e.kanji_forms or word in e.kana_forms]
+    pool = matches or entries
+
+    if reading:
+        import jaconv
+
+        target = jaconv.kata2hira(reading)
+        for e in pool:
+            if any(jaconv.kata2hira(k) == target for k in e.kana_forms):
+                return e
+
+    return pool[0]
 
 
-def definition(word: str, lemma: str | None = None, max_glosses: int = 3) -> tuple[str, bool]:
+def definition(
+    word: str, lemma: str | None = None, reading: str | None = None, max_glosses: int = 3
+) -> tuple[str, bool]:
     """Return (definition_text, found). Tries `word` first, then `lemma`
-    (useful when the user typed an inflected form, e.g. "食べた")."""
-    entry = best_entry(word)
+    (useful when the user typed an inflected form, e.g. "食べた"), using
+    `reading` to disambiguate homographs when there's more than one JMdict
+    entry for the same kanji spelling."""
+    entry = best_entry(word, reading=reading)
     if entry is None and lemma and lemma != word:
-        entry = best_entry(lemma)
+        entry = best_entry(lemma, reading=reading)
     if entry is None or not entry.glosses:
         return "", False
     return "; ".join(entry.glosses[:max_glosses]), True
