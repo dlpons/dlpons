@@ -82,10 +82,12 @@ def definition(
 
 def reading_is_confirmed(word: str, kana_reading: str) -> bool:
     """True if `kana_reading` (hiragana or katakana) matches a reading
-    JMdict records for `word`."""
+    JMdict records for `word`. Passes the reading into best_entry() so a
+    homograph (e.g. 分's ぶん sense) is checked against its own matching
+    entry rather than JMdict's arbitrary first-listed one."""
     import jaconv
 
-    entry = best_entry(word)
+    entry = best_entry(word, reading=kana_reading)
     if entry is None:
         return False
     target = jaconv.kata2hira(kana_reading)
