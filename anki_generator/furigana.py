@@ -106,8 +106,46 @@ def furigana_for_token(token: Token, flags: list[str]) -> str:
         return surface
 
 
+def _rendaku_person_suffix_reading(prev: Token, suffix: Token) -> str | None:
+    """UniDic reads the bound suffix 人 ("-person/-people") as にん in
+    isolation, but after a place/nationality/group name it's almost always
+    voiced to じん via rendaku (日本人, 外国人, 中国人, ...), which a plain
+    per-token reading doesn't capture. Only overrides the suffix's own
+    reading -- and only when JMdict's compound entry confirms the *sole*
+    difference from the naive concatenation is exactly this にん->じん
+    voicing -- so it can't accidentally substitute an unrelated homograph
+    reading for the whole span (that's what went wrong with a broader,
+    less targeted version of this fix: it picked JMdict's first reading
+    for 何時 -- いつ, "when" -- over UniDic's contextually-correct なんじ,
+    "what time")."""
+    if suffix.surface != "人":
+        return None
+    prev_reading = jaconv.kata2hira(prev.kana) if prev.kana and prev.kana != "*" else ""
+    suffix_reading = jaconv.kata2hira(suffix.kana) if suffix.kana and suffix.kana != "*" else ""
+    if not prev_reading or suffix_reading != "にん":
+        return None
+
+    combined = prev.surface + "人"
+    entry = dictionary.best_entry(combined)
+    if entry is None or combined not in entry.kanji_forms:
+        return None
+
+    target = prev_reading + "じん"
+    if any(jaconv.kata2hira(k) == target for k in entry.kana_forms):
+        return "じん"
+    return None
+
+
 def annotate(text: str) -> tuple[str, list[str]]:
     """Return (furigana_text, flags) for a word or full sentence."""
     flags: list[str] = []
-    out = [furigana_for_token(tok, flags) for tok in tokenize(text)]
+    tokens = tokenize(text)
+    out = []
+    for i, tok in enumerate(tokens):
+        if i > 0:
+            override = _rendaku_person_suffix_reading(tokens[i - 1], tok)
+            if override is not None:
+                out.append(align_reading(tok.surface, override))
+                continue
+        out.append(furigana_for_token(tok, flags))
     return "".join(out), flags

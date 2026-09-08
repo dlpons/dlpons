@@ -79,3 +79,20 @@ def test_anki_furigana_filter_handles_adjacent_kanji_runs():
     # each ruby's base must stay scoped to its own run.
     text, _flags = annotate("一生出かけられません")
     assert _anki_ruby_bases(text) == ["一生", "出"]
+
+
+def test_person_suffix_rendaku():
+    # UniDic tokenizes 日本人 as 日本(にっぽん) + 人(にん), but the compound
+    # is にほんじん/にっぽんじん -- 人 voices to じん after a place/nationality
+    # name. Only the suffix's own reading should change.
+    text, _flags = annotate("日本人が住んでいる")
+    assert " 人[じん]" in text
+    assert " 人[にん]" not in text
+
+
+def test_person_suffix_rendaku_does_not_override_unrelated_homographs():
+    # Regression check for an earlier, broader version of this fix that
+    # accidentally let JMdict's first-listed reading for 何時 (いつ, "when")
+    # override UniDic's contextually-correct なんじ ("what time") reading.
+    text, _flags = annotate("何時に待ち合わせる？")
+    assert "なん" in text or "何[なん]" in text
