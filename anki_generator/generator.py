@@ -2,14 +2,15 @@
 
 import jaconv
 
-from . import dictionary, furigana, nuance, pitch_accent
+from . import definition_ja, dictionary, furigana, nuance, pitch_accent
 from .models import CardResult, Entry
 from .tokenizer import tokenize
 
 
 def _word_reading(word: str) -> str:
     """The full hiragana reading of `word` per UniDic -- used to pick the
-    correct JMdict homograph (e.g. 分 read as ぶん here, not ふん)."""
+    correct JMdict homograph, e.g. by furigana.annotate() and
+    pitch_accent.lookup_word()."""
     tokens = tokenize(word)
     return "".join(jaconv.kata2hira(t.kana) for t in tokens if t.kana and t.kana != "*")
 
@@ -32,14 +33,20 @@ def build_card(entry: Entry, use_llm: bool = True) -> CardResult:
     if entry.definition:
         definition = entry.definition
         result.definition = definition
-    else:
+    elif use_llm:
         tokens = tokenize(entry.word)
         lemma = tokens[0].lemma if tokens else entry.word
         reading = _word_reading(entry.word)
-        definition, found = dictionary.definition(entry.word, lemma=lemma, reading=reading)
+        english_gloss, _found = dictionary.definition(entry.word, lemma=lemma, reading=reading)
+        definition, generated = definition_ja.generate(entry.word, entry.sentence, english_gloss)
         result.definition = definition
-        if not found:
-            result.add_flag(f'"{entry.word}" not found in JMdict -- Definition left blank')
+        if not generated:
+            result.add_flag(
+                f'definition not generated for "{entry.word}" -- set ANTHROPIC_API_KEY, or fill in manually'
+            )
+    else:
+        definition = ""
+        result.add_flag(f'definition generation skipped (--no-llm) for "{entry.word}"')
 
     if entry.nuance:
         result.nuance = entry.nuance

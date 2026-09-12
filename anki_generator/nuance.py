@@ -1,8 +1,9 @@
-"""Nuance-note generation. Unlike furigana/pitch-accent/definition, this
-field is explicitly LLM-generated per spec: a concept-first explanation of
-how the word actually feels/is used, for cases with no clean English
-equivalent. Requires ANTHROPIC_API_KEY; if it's not set (or --no-llm is
-passed), the field is left blank and flagged rather than faked.
+"""Nuance-note generation. Unlike furigana/pitch-accent, which are pulled
+from real dictionary data, this field is explicitly LLM-generated per
+spec: a concept-first explanation of how the word actually feels/is used,
+for cases with no clean equivalent in the Definition field. Requires
+ANTHROPIC_API_KEY; if it's not set (or --no-llm is passed), the field is
+left blank and flagged rather than faked.
 """
 
 import os
@@ -35,7 +36,7 @@ def generate(word: str, definition: str, sentence: str) -> tuple[str, bool]:
     client = anthropic.Anthropic(api_key=api_key)
     user_prompt = (
         f"Word: {word}\n"
-        f"Dictionary definition: {definition or '(not found in JMdict)'}\n"
+        f"Definition: {definition or '(none available)'}\n"
         f"Example sentence: {sentence}\n\n"
         "Write the nuance note."
     )

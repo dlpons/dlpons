@@ -21,13 +21,28 @@ def test_no_prefilled_nuance_falls_back_to_llm():
     assert result.nuance == "generated text"
 
 
-def test_prefilled_definition_is_used_and_skips_jmdict_lookup():
-    # あり alone resolves to JMdict's 蟻 ("ant") entry rather than the
-    # intended slang "acceptable" sense -- a prefilled definition should
-    # bypass the lookup entirely.
-    entry = Entry(word="あり", sentence="じゃなかったらありだった。", definition="existing; alright; acceptable")
-    with patch("anki_generator.dictionary.definition") as mock_definition:
-        result = build_card(entry, use_llm=False)
-    mock_definition.assert_not_called()
-    assert result.definition == "existing; alright; acceptable"
-    assert not any("JMdict" in flag for flag in result.flags)
+def test_prefilled_definition_is_used_and_skips_llm_call():
+    entry = Entry(word="あり", sentence="じゃなかったらありだった。", definition="「よい」「OK」という意味です。")
+    with patch("anki_generator.definition_ja.generate") as mock_generate:
+        result = build_card(entry, use_llm=True)
+    mock_generate.assert_not_called()
+    assert result.definition == "「よい」「OK」という意味です。"
+    assert not any("definition" in flag for flag in result.flags)
+
+
+def test_no_prefilled_definition_falls_back_to_llm():
+    entry = Entry(word="甘える", sentence="甘えていた。")
+    with (
+        patch("anki_generator.definition_ja.generate", return_value=("やさしい説明", True)) as mock_def,
+        patch("anki_generator.nuance.generate", return_value=("nuance text", True)),
+    ):
+        result = build_card(entry, use_llm=True)
+    mock_def.assert_called_once()
+    assert result.definition == "やさしい説明"
+
+
+def test_no_llm_and_no_prefilled_definition_leaves_it_blank():
+    entry = Entry(word="甘える", sentence="甘えていた。")
+    result = build_card(entry, use_llm=False)
+    assert result.definition == ""
+    assert any("definition generation skipped" in flag for flag in result.flags)
